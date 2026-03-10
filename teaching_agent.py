@@ -408,13 +408,13 @@ st.markdown("---")
 col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
 
 with col_btn1:
-    generate_design = st.button("🎨 生成教学设计", use_container_width=True, type="primary")
+    generate_design = st.button("🎨 生成教学设计", use_container_width=True, type="primary", key="btn_design")
 
 with col_btn2:
-    generate_ppt = st.button("📊 生成PPT大纲", use_container_width=True, disabled=not st.session_state.get("teaching_design"))
+    generate_ppt = st.button("📊 生成PPT大纲", use_container_width=True, disabled=not st.session_state.get("teaching_design"), key="btn_ppt")
 
 with col_btn3:
-    generate_slides = st.button("🎬 生成Banana Slides", use_container_width=True, disabled=not st.session_state.get("ppt_outline"))
+    generate_slides = st.button("🎬 生成Banana Slides", use_container_width=True, disabled=not st.session_state.get("ppt_outline"), key="btn_slides")
 
 
 # 生成教学设计
