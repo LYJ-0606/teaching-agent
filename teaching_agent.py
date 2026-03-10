@@ -416,6 +416,11 @@ with col_btn2:
 with col_btn3:
     generate_slides = st.button("🎬 生成Banana Slides", use_container_width=True, disabled=not st.session_state.get("ppt_outline"))
 
+
+# 生成教学设计
+if generate_design:
+    if not api_key:
+        st.error("❌ 请先在侧边栏输入 DeepSeek API Key")
     elif not subject or not content or not audience:
         st.error("❌ 请填写完整的基本教学信息（学科、内容、对象）")
     elif not student_level:
