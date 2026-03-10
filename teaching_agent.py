@@ -136,10 +136,10 @@ def generate_teaching_design(client, subject, content, method, duration, audienc
 **重要要求**：
 1. 教学目标必须基于物理核心素养（物理观念、科学思维、科学探究、科学态度与责任）进行设计，不能直接照搬用户输入的教学目标，而是要结合用户目标和核心素养进行优化
 2. 必须包含详细的板书设计部分
-3. 详细的教学环节（包括精确的时间分配、教师活动、学生活动）
+3. 教学过程必须使用Markdown表格呈现，表格包含列：教学环节 | 时间 | 教师活动 | 学生活动 | 设计意图
 4. 教学评价方式
 
-请以结构化的方式输出，使用 Markdown 格式。"""
+请以结构化的方式输出，使用 Markdown 格式，教学过程部分必须使用Markdown表格。"""
 
     # 构建用户提示
     user_prompt = f"""请为以下教学内容设计教学过程：
@@ -189,7 +189,7 @@ def generate_ppt_outline(client, subject, content, method, teaching_design):
 3. 建议的视觉元素（图片、图表、动画等）
 4. 页面布局建议
 
-请以结构化的方式输出，使用 Markdown 格式。"""
+请以结构化的方式输出，使用 Markdown 格式，教学过程部分必须使用Markdown表格。"""
 
     user_prompt = f"""基于以下教学设计，请创建PPT演示文稿大纲：
 
@@ -216,46 +216,87 @@ def generate_ppt_outline(client, subject, content, method, teaching_design):
 
 
 def markdown_to_word(markdown_text, title):
-    """将Markdown文本转换为Word文档"""
+    """将Markdown文本转换为Word文档，支持表格"""
     doc = Document()
     
     # 设置标题
     heading = doc.add_heading(title, 0)
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # 解析Markdown并添加到文档
-    lines = markdown_text.split('\n')
-    for line in lines:
-        line = line.strip()
+    # 先把文本按行分割，检测表格块
+    lines = markdown_text.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        
         if not line:
+            i += 1
             continue
+        
+        # 检测表格（以 | 开头）
+        if line.startswith("|") and "|" in line[1:]:
+            # 收集整个表格
+            table_lines = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                table_lines.append(lines[i].strip())
+                i += 1
             
+            # 过滤掉分隔行（如 |---|---|）
+            data_lines = [l for l in table_lines if not re.match(r"^\|[-:\s|]+\|$", l)]
+            
+            if len(data_lines) >= 1:
+                # 解析表头
+                headers = [cell.strip() for cell in data_lines[0].split("|") if cell.strip()]
+                n_cols = len(headers)
+                n_rows = len(data_lines)
+                
+                # 创建 Word 表格
+                table = doc.add_table(rows=n_rows, cols=n_cols)
+                table.style = "Table Grid"
+                
+                # 填入数据
+                for row_idx, row_line in enumerate(data_lines):
+                    cells = [cell.strip() for cell in row_line.split("|") if cell.strip()]
+                    for col_idx, cell_text in enumerate(cells[:n_cols]):
+                        cell = table.cell(row_idx, col_idx)
+                        cell.text = cell_text
+                        if row_idx == 0:
+                            # 表头加粗
+                            for para in cell.paragraphs:
+                                for run in para.runs:
+                                    run.bold = True
+                
+                doc.add_paragraph()  # 表格后空行
+            continue
+        
         # 处理标题
-        if line.startswith('# '):
+        if line.startswith("# "):
             doc.add_heading(line[2:], level=1)
-        elif line.startswith('## '):
+        elif line.startswith("## "):
             doc.add_heading(line[3:], level=2)
-        elif line.startswith('### '):
+        elif line.startswith("### "):
             doc.add_heading(line[4:], level=3)
-        elif line.startswith('#### '):
+        elif line.startswith("#### "):
             doc.add_heading(line[5:], level=4)
         # 处理列表
-        elif line.startswith('- ') or line.startswith('* '):
-            doc.add_paragraph(line[2:], style='List Bullet')
-        elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. '):
-            doc.add_paragraph(line[3:], style='List Number')
+        elif line.startswith("- ") or line.startswith("* "):
+            doc.add_paragraph(line[2:], style="List Bullet")
+        elif re.match(r"^\d+\. ", line):
+            doc.add_paragraph(re.sub(r"^\d+\. ", "", line), style="List Number")
         # 处理加粗
-        elif '**' in line:
+        elif "**" in line:
             p = doc.add_paragraph()
-            parts = line.split('**')
-            for i, part in enumerate(parts):
-                if i % 2 == 0:
+            parts = line.split("**")
+            for idx, part in enumerate(parts):
+                if idx % 2 == 0:
                     p.add_run(part)
                 else:
                     p.add_run(part).bold = True
         # 普通段落
         else:
             doc.add_paragraph(line)
+        
+        i += 1
     
     # 保存到内存
     file_stream = io.BytesIO()
@@ -282,15 +323,12 @@ with st.sidebar:
     st.markdown("### 📖 使用说明")
     st.markdown("""
     1. 输入 API Key
-    2. 填写完整的教学信息
-    3. 选择教学方法和时长
-    4. 输入教学重难点
-    5. 输入教学目标和其他要求
-    6. 点击生成按钮
-    7. 查看教学设计和PPT大纲
-    8. 生成Banana Slides在线演示
-    8. 生成Banana Slides在线演示
-    8. 生成Banana Slides在线演示
+    2. 填写完整的教学信息和设计要素
+    3. 点击生成教学设计按钮
+    4. 下载教学设计
+    5. 点击生成PPT大纲按钮
+    6. 下载PPT大纲
+    7. 点击制作PPT演示前往Banana Slides
     """)
     
     st.markdown("---")
@@ -300,8 +338,6 @@ with st.sidebar:
     - 📝 自动生成板书设计
     - 👥 根据学生情况因材施教
     - ⏱️ 精确的时间分配
-    - 📄 导出Word文档
-    - 📄 导出Word文档
     - 📄 导出Word文档
     - 🎨 美观的界面设计
     """)
