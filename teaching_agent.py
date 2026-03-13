@@ -483,22 +483,28 @@ if generate_design:
                 st.session_state.subject = subject
                 st.session_state.content = content
                 st.session_state.method = method
-                st.success("✅ 教学设计生成完成！")
                 
-                # 生成Word文档
+                # 生成Word文档并保存到session_state
                 word_file = markdown_to_word(full_design, f"{subject} - {content} 教学设计")
+                st.session_state.teaching_design_word = word_file.read()
+                st.session_state.design_subject = subject
+                st.session_state.design_content = content
                 
-                # 下载按钮
-                st.download_button(
-                    label="📥 下载教学设计（Word格式）",
-                    data=word_file,
-                    file_name=f"{subject}_{content}_教学设计.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
+                st.success("✅ 教学设计生成完成！")
                 
             except Exception as e:
                 st.error(f"❌ 生成失败: {str(e)}")
+
+# 教学设计下载按钮（在spinner外部，持久显示）
+if st.session_state.get("teaching_design_word"):
+    st.download_button(
+        label="📥 下载教学设计（Word格式）",
+        data=st.session_state.teaching_design_word,
+        file_name=f"{st.session_state.get('design_subject', '教学')}_{st.session_state.get('design_content', '设计')}_教学设计.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        use_container_width=True,
+        key="download_design"
+    )
 
 # 生成PPT大纲
 if generate_ppt:
