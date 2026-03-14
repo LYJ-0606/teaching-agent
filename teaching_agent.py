@@ -531,24 +531,29 @@ if generate_ppt:
                         ppt_container.markdown(full_ppt)
                 
                 st.session_state.ppt_outline = full_ppt
-                st.success("✅ PPT大纲生成完成！")
                 
-                # 生成Word文档
+                # 生成Word文档并保存到session_state
                 word_file = markdown_to_word(full_ppt, f"{subject} - {content} PPT大纲")
+                st.session_state.ppt_outline_word = word_file.read()
+                st.session_state.ppt_subject = subject
+                st.session_state.ppt_content = content
                 
-                # 下载按钮
-                st.download_button(
-                    label="📥 下载PPT大纲（Word格式）",
-                    data=word_file,
-                    file_name=f"{subject}_{content}_PPT大纲.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
-                
+                st.success("✅ PPT大纲生成完成！")
                 st.info("💡 提示：下载大纲后，可以点击上方'制作PPT演示'按钮，访问 Banana Slides 在线制作精美的演示文稿")
                 
             except Exception as e:
                 st.error(f"❌ 生成失败: {str(e)}")
+
+# PPT大纲下载按钮（在spinner外部，持久显示）
+if st.session_state.get("ppt_outline_word"):
+    st.download_button(
+        label="📥 下载PPT大纲（Word格式）",
+        data=st.session_state.ppt_outline_word,
+        file_name=f"{st.session_state.get('ppt_subject', '教学')}_{st.session_state.get('ppt_content', '大纲')}_PPT大纲.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        use_container_width=True,
+        key="download_ppt"
+    )
 
 
 
